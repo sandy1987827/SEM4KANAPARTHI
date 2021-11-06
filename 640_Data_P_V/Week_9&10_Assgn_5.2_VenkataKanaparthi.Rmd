@@ -1,0 +1,79 @@
+---
+title: "Week_9&10_Assgn_5.2_VenkataKanaparthi"
+author: "Venkata Kanaparthi"
+date: "11/2/2021"
+output: pdf_document
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r include=TRUE}
+# Loading the required libraries
+library(akima)
+library(ggm)
+library(ggplot2)
+library(readxl)
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(gapminder)
+library(Rcpp)
+library(plotly)
+library(treemap)
+library(scales)
+library(leaflet)
+```
+
+
+```{r include=TRUE}
+# Read csv input
+ppgdf <- read.csv("ppg2008.csv")
+head(ppgdf)
+costcodf <- read.csv("costcos-geocoded.csv")
+head(costcodf)
+```
+
+```{r include=TRUE}
+# Heat maps
+ppgdf$Name <- with(ppgdf, reorder(Name, PTS))
+ppgdf.m <- melt(ppgdf)
+ppgdf.m <- ddply(ppgdf.m, .(variable), transform, rescale = rescale(value))
+base_size <- 9
+(p <- ggplot(ppgdf.m, aes(variable, Name)) + geom_tile(aes(fill = rescale), colour = "white") + scale_fill_gradient(low = "white", high = "steelblue"))
+p + theme_grey(base_size = base_size) + labs(x = "", y = "") + scale_x_discrete(expand = c(0, 0)) +
+        scale_y_discrete(expand = c(0, 0)) + 
+        theme(axis.text.x=element_text(angle=90, hjust=0, vjust= 0.1)) +
+        theme(axis.text.y=element_text(hjust=0, vjust= 0.1)) +
+        ggtitle("2008 Basketball Player Statistics") +
+        xlab("Statistic") + 
+        ylab("Basketball Player")
+```
+
+```{r include=TRUE}
+# Spatial charts
+costcodf$faddr <- paste(costcodf$Address, costcodf$City, costcodf$State, costcodf$Zip.Code )
+chart <- leaflet()
+chart <- addTiles(chart)
+chart <- addMarkers(chart, lng=costcodf$Longitude, lat=costcodf$Latitude, popup=costcodf$faddr)
+chart
+```
+
+```{r include=TRUE}
+contrChart <-interp2xyz(interp(x=ppgdf$FGA, y=ppgdf$PTS, z=ppgdf$FGP, duplicate="mean"), data.frame=TRUE)
+contrChart %>%
+        filter(!is.na(z)) %>%
+        tbl_df() %>%
+        ggplot(aes(x = x, y = y, z = z, fill = z)) + 
+        geom_tile() + 
+        geom_contour(color = "white", alpha = 0.05) + 
+        scale_fill_distiller(palette="Blues", na.value="white") + 
+        theme_bw() +
+        xlab("PTS") +
+        ylab("FGA") +
+        ggtitle("Basketball FGP Based on FGA and PTS Contour Plot") +
+        guides(fill=guide_legend(title="FGP"))
+```
